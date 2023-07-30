@@ -78,6 +78,15 @@
             },
             "slippage": {
               "$ref": "#/definitions/Slippage"
+            },
+            "swap_routes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/SwapAmountInRoute"
+              }
             }
           },
           "additionalProperties": false
@@ -152,7 +161,6 @@
       ]
     },
     "SwapAmountInRoute": {
-      "description": "===================== MsgSwapExactAmountIn",
       "type": "object",
       "required": [
         "pool_id",

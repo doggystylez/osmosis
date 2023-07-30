@@ -5,7 +5,7 @@ use cosmwasm_std::{
     coin, coins, has_coins, to_binary, BankMsg, Coin, DepsMut, Env, MessageInfo, Reply, Response,
     SubMsg, SubMsgResponse, SubMsgResult, Uint128,
 };
-use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{MsgSwapExactAmountInResponse, SwapAmountInRoute};
 
 use crate::contract::SWAP_REPLY_ID;
 use crate::error::ContractError;
@@ -61,6 +61,7 @@ pub fn trade_with_slippage_limit(
     input_token: Coin,
     output_denom: String,
     slippage: Slippage,
+    swap_routes: Option<Vec<SwapAmountInRoute>>,
 ) -> Result<Response, ContractError> {
     if !has_coins(&info.funds, &input_token) {
         return Err(ContractError::InsufficientFunds {});
@@ -77,6 +78,7 @@ pub fn trade_with_slippage_limit(
             env.block.time,
             window_seconds,
             slippage_percentage,
+            swap_routes.clone(),
         )?,
         Slippage::MinOutputAmount(minimum_output_amount) => {
             coin(minimum_output_amount.u128(), output_denom)
@@ -89,6 +91,7 @@ pub fn trade_with_slippage_limit(
         env.contract.address,
         input_token,
         min_output_token,
+        swap_routes,
     )?;
 
     // save intermediate state for reply

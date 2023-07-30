@@ -2,9 +2,10 @@ use std::ops::{Div, Mul};
 
 use cosmwasm_std::{Addr, Coin, Decimal, Deps, Timestamp, Uint128};
 use osmosis_std::shim::Timestamp as OsmosisTimestamp;
-use osmosis_std::types::osmosis::gamm::v1beta1::{
-    MsgSwapExactAmountIn, QueryTotalPoolLiquidityRequest, SwapAmountInRoute,
+use osmosis_std::types::osmosis::poolmanager::v1beta1::{
+    MsgSwapExactAmountIn, SwapAmountInRoute,
 };
+use osmosis_std::types::osmosis::gamm::v1beta1::QueryTotalPoolLiquidityRequest;
 use osmosis_std::types::osmosis::twap::v1beta1::TwapQuerier;
 
 use crate::{
@@ -58,7 +59,7 @@ pub fn validate_pool_route(
             return Result::Err(ContractError::InvalidPoolRoute {
                 reason: format!(
                     "denom {} is not in pool id {}",
-                    current_denom, route_part.pool_id
+                    route_part.token_out_denom, route_part.pool_id
                 ),
             });
         }
@@ -81,9 +82,17 @@ pub fn generate_swap_msg(
     sender: Addr,
     input_token: Coin,
     min_output_token: Coin,
+    swap_routes: Option<Vec<SwapAmountInRoute>>,
 ) -> Result<MsgSwapExactAmountIn, ContractError> {
-    // get trade route
-    let route = ROUTING_TABLE.load(deps.storage, (&input_token.denom, &min_output_token.denom))?;
+    let route = match swap_routes {
+        // if trade route is supplied, check route is valid
+        Some(v) => {
+            validate_pool_route(deps, input_token.clone().denom, min_output_token.denom,v.clone())?;
+            v
+        }
+        // if no route supplied, load from state
+        None => ROUTING_TABLE.load(deps.storage, (&input_token.denom, &min_output_token.denom))?,
+    };
     Ok(MsgSwapExactAmountIn {
         sender: sender.into_string(),
         routes: route,
@@ -99,11 +108,17 @@ pub fn calculate_min_output_from_twap(
     now: Timestamp,
     window: Option<u64>,
     percentage_impact: Decimal,
+    swap_routes: Option<Vec<SwapAmountInRoute>>,
 ) -> Result<Coin, ContractError> {
     // get trade route
-    let route = ROUTING_TABLE
-        .load(deps.storage, (&input_token.denom, &output_denom))
-        .unwrap_or_default();
+    let route = match swap_routes {
+        Some(v) => {
+            v
+        }
+        None => ROUTING_TABLE
+            .load(deps.storage, (&input_token.denom, &output_denom))
+            .unwrap_or_default()
+    };
     if route.is_empty() {
         return Err(ContractError::InvalidPoolRoute {
             reason: format!("No route found for {} -> {output_denom}", input_token.denom),

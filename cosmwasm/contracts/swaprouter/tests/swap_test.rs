@@ -2,10 +2,10 @@ mod test_env;
 use std::str::FromStr;
 
 use cosmwasm_std::{Coin, Decimal};
-use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
-use osmosis_testing::cosmrs::proto::cosmos::bank::v1beta1::QueryAllBalancesRequest;
-use osmosis_testing::cosmrs::proto::cosmwasm::wasm::v1::MsgExecuteContractResponse;
-use osmosis_testing::{
+use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
+use osmosis_std::types::cosmos::bank::v1beta1::QueryAllBalancesRequest;
+use osmosis_std::types::cosmwasm::wasm::v1::MsgExecuteContractResponse;
+use osmosis_test_tube::{
     Account, Bank, Module, OsmosisTestApp, RunnerError, RunnerExecuteResult, SigningAccount, Wasm,
 };
 use swaprouter::msg::{ExecuteMsg, Slippage};
@@ -19,6 +19,7 @@ test_swap!(
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
         slippage: Slippage::MinOutputAmount(1u128.into()),
+        swap_routes: None,
     },
     funds: [
         Coin::new(1000, "uosmo")
@@ -33,6 +34,7 @@ test_swap!(
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
         slippage: Slippage::MinOutputAmount(1u128.into()),
+        swap_routes: None,
     },
     funds: [
         Coin::new(10, "uosmo")
@@ -47,6 +49,7 @@ test_swap!(
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
         slippage: Slippage::MinOutputAmount(1u128.into()),
+        swap_routes: None,
     },
     funds: [
         Coin::new(10, "uion")
@@ -61,6 +64,7 @@ test_swap!(
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
         slippage: Slippage::MinOutputAmount(1000000000000000000000000u128.into()),
+        swap_routes: None,
     },
     funds: [
         Coin::new(1000, "uosmo")
@@ -69,12 +73,13 @@ test_swap!(
 
 test_swap!(
     non_existant_route should failed_with
-    "alloc::vec::Vec<osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute> not found: execute wasm contract failed",
+    "alloc::vec::Vec<osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute> not found: execute wasm contract failed",
 
     msg = ExecuteMsg::Swap {
         input_coin: Coin::new(1000, "uion"),
         output_denom: "uosmo".to_string(),
         slippage: Slippage::MinOutputAmount(1000000000000000000000000u128.into()),
+        swap_routes: None,
     },
     funds: [
         Coin::new(1000, "uion")
@@ -88,9 +93,41 @@ test_swap!(
         input_coin: Coin::new(1000, "uosmo"),
         output_denom: "uion".to_string(),
         slippage: Slippage::Twap{ window_seconds: Some(1), slippage_percentage: Decimal::from_str("5").unwrap() },
+        swap_routes: None,
     },
     funds: [
         Coin::new(10000, "uosmo")
+    ]
+);
+
+test_swap!(
+    swap_with_route
+    should succeed,
+
+    msg = ExecuteMsg::Swap {
+        input_coin: Coin::new(1000, "uosmo"),
+        output_denom: "uion".to_string(),
+        slippage: Slippage::MinOutputAmount(1u128.into()),
+        swap_routes: Some(vec![SwapAmountInRoute{pool_id: 1, token_out_denom: "uion".to_string()}]),
+    },
+    funds: [
+        Coin::new(1000, "uosmo")
+    ]
+);
+
+test_swap!(
+    swap_with_invalid_route
+    should failed_with
+    "Invalid Pool Route: \"denom uatom is not in pool id 1\": execute wasm contract failed",
+
+    msg = ExecuteMsg::Swap {
+        input_coin: Coin::new(1000, "uosmo"),
+        output_denom: "uion".to_string(),
+        slippage: Slippage::MinOutputAmount(1u128.into()),
+        swap_routes: Some(vec![SwapAmountInRoute{pool_id: 1, token_out_denom: "uatom".to_string()}]),
+    },
+    funds: [
+        Coin::new(1000, "uosmo")
     ]
 );
 
@@ -223,7 +260,7 @@ fn assert_input_decreased_and_output_increased(
 }
 
 fn get_amount(
-    balances: &Vec<osmosis_testing::cosmrs::proto::cosmos::base::v1beta1::Coin>,
+    balances: &[osmosis_std::types::cosmos::base::v1beta1::Coin],
     denom: &str,
 ) -> u128 {
     balances

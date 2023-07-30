@@ -54,7 +54,8 @@ pub fn execute(
             input_coin,
             output_denom,
             slippage,
-        } => trade_with_slippage_limit(deps, env, info, input_coin, output_denom, slippage),
+            swap_routes,
+        } => trade_with_slippage_limit(deps, env, info, input_coin, output_denom, slippage, swap_routes),
         ExecuteMsg::TransferOwnership { new_owner } => transfer_ownership(deps, info, new_owner),
     }
 }
