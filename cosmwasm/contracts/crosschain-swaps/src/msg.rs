@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
+use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 use registry::msg::SerializableJson;
 use swaprouter::msg::Slippage;
 
@@ -36,6 +37,8 @@ pub enum ExecuteMsg {
         receiver: String,
         /// Slippage for the swap
         slippage: Slippage,
+        /// Optional route for the swap
+        swap_routes: Option<Vec<SwapAmountInRoute>>,
         /// IBC packets can contain an optional memo. If a sender wants the sent
         /// packet to include a memo, this is the field where they can specify
         /// it. If provided, the memo is expected to be a valid JSON object

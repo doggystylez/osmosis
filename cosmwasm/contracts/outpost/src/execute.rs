@@ -50,6 +50,7 @@ pub fn execute_swap(
         output_denom,
         receiver,
         slippage,
+        swap_routes: None,
         next_memo,
         on_failed_delivery,
     };

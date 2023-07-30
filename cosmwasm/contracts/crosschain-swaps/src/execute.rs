@@ -3,6 +3,7 @@ use cosmwasm_std::{Addr, Coin, DepsMut, Response, SubMsg, SubMsgResponse, SubMsg
 use registry::msg::{Callback, SerializableJson};
 use registry::{Registry, RegistryError};
 use swaprouter::msg::ExecuteMsg as SwapRouterExecute;
+use osmosis_std::types::osmosis::poolmanager::v1beta1::SwapAmountInRoute;
 
 use crate::checks::{check_is_contract_governor, ensure_key_missing, validate_receiver};
 use crate::consts::{MsgReplyID, CALLBACK_KEY};
@@ -26,6 +27,7 @@ pub fn unwrap_or_swap_and_forward(
     ctx: (DepsMut, Env, MessageInfo),
     output_denom: String,
     slippage: swaprouter::Slippage,
+    swap_routes: Option<Vec<SwapAmountInRoute>>,
     receiver: &str,
     next_memo: Option<SerializableJson>,
     failed_delivery_action: FailedDeliveryAction,
@@ -64,6 +66,7 @@ pub fn unwrap_or_swap_and_forward(
                     output_denom,
                     receiver: receiver.to_string(),
                     slippage,
+                    swap_routes,
                     next_memo,
                     on_failed_delivery: failed_delivery_action,
                 })?
@@ -79,6 +82,7 @@ pub fn unwrap_or_swap_and_forward(
         swap_coin,
         output_denom,
         slippage,
+        swap_routes,
         receiver,
         next_memo,
         failed_delivery_action,
@@ -94,6 +98,7 @@ pub fn swap_and_forward(
     swap_coin: Coin,
     output_denom: String,
     slippage: swaprouter::Slippage,
+    swap_routes: Option<Vec<SwapAmountInRoute>>,
     receiver: &str,
     next_memo: Option<SerializableJson>,
     failed_delivery_action: FailedDeliveryAction,
@@ -134,6 +139,7 @@ pub fn swap_and_forward(
         input_coin: swap_coin.clone(),
         output_denom,
         slippage,
+        swap_routes,
     };
     let msg = wasm_execute(config.swap_contract, &swap_msg, vec![swap_coin])?;
 
