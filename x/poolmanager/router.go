@@ -7,9 +7,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/osmosis-labs/osmosis/v20/x/poolmanager/client/queryproto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/osmosis-labs/osmosis/v20/x/poolmanager/client/queryproto"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -567,11 +568,11 @@ func (k Keeper) ListPoolsByDenom(
 
 		var poolsByDenom []types.PoolI
 		for _, pool := range currentModulePools {
-			coins, err := k.GetTotalPoolLiquidity(ctx, pool.GetId())
+			poolDenoms, err := poolModule.GetPoolDenoms(ctx, pool.GetId())
 			if err != nil {
 				return nil, err
 			}
-			if coins.AmountOf(denom).GT(osmomath.ZeroInt()) {
+			if osmoutils.Contains(poolDenoms, denom) {
 				poolsByDenom = append(poolsByDenom, pool)
 			}
 		}
